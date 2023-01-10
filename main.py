@@ -49,7 +49,26 @@ def draw_top_gamers():
         print(s)
 
 
-def draw_interface(score, delta=0):
+def init_const(score, mas):
+    mas = [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+    ]
+    empty = get_empty_list(mas)
+    random.shuffle(empty)
+    random_num1 = empty.pop()
+    random_num2 = empty.pop()
+    x1, y1 = get_index_from_numder(random_num1)
+    mas = insert_2_or_4(mas, x1, y1)
+    x2, y2 = get_index_from_numder(random_num2)
+    mas = insert_2_or_4(mas, x2, y2)
+    score = 0
+    return score, mas
+
+
+def draw_interface(score, mas, delta=0):
     pygame.draw.rect(screen, WHITE, TITLE_REC)
     font = pygame.font.SysFont("comicsansms", 50)
     font_score = pygame.font.SysFont("comicsansms", 35)
@@ -77,30 +96,13 @@ def draw_interface(score, delta=0):
                 screen.blit(text, (text_x, text_y))
 
 
-def init_const():
-    global score, mas
-    mas = [
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-    ]
-    empty = get_empty_list(mas)
-    random.shuffle(empty)
-    random_num1 = empty.pop()
-    random_num2 = empty.pop()
-    x1, y1 = get_index_from_numder(random_num1)
-    mas = insert_2_or_4(mas, x1, y1)
-    x2, y2 = get_index_from_numder(random_num2)
-    mas = insert_2_or_4(mas, x2, y2)
-    score = 0
-
-
 mas = None
 score = None
 USERNAME = None
 path = os.getcwd()
-if 'data.txt' in os.listdir(path):
+
+
+def load_game():
     with open('data.txt') as file:
         data = json.load(file)
         mas = data['mas']
@@ -108,17 +110,17 @@ if 'data.txt' in os.listdir(path):
         USERNAME = data['user']
     full_path = os.path.join(path, 'data.txt')
     os.remove(full_path)
-else:
-    init_const()
+    return USERNAME, score, mas
 
-print(get_empty_list(mas))
+
+# print(get_empty_list(mas))
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("2048")
 
 
-def draw_intro():
+def draw_intro(USERNAME):
     img2048 = pygame.image.load("1404598408_1.png")
     font = pygame.font.SysFont("comicsansms", 50)
     text_welcome = font.render("Welcome! ", True, WHITE)
@@ -141,7 +143,6 @@ def draw_intro():
                     name = name[:-1]
                 elif event.key == pygame.K_RETURN:
                     if len(name) > 2:
-                        global USERNAME
                         USERNAME = name
                         is_find_name = True
                         break
@@ -156,54 +157,59 @@ def draw_intro():
         screen.blit(text_name, rect_name)
         pygame.display.update()
     screen.fill(BLACK)
+    return USERNAME
 
 
-def draw_game_over():
-    global USERNAME, mas, score, GAMERS_DB
-    img2048 = pygame.image.load("1404598408_1.png")
-    font = pygame.font.SysFont("comicsansms", 50)
-    font1 = pygame.font.SysFont("comicsansms", 30)
-    text_over = font.render("Game over! ", True, WHITE)
-    text_hint1 = font1.render("Press 'Space' to try again", True, GRAY)
-    text_hint2 = font1.render("Press 'Enter' to start new game", True, GRAY)
-    text_score = font.render(f"Your score: {score} ", True, WHITE)
-    best_score = GAMERS_DB[0][1]
-    if score > best_score:
-        text = "New record!"
-    else:
-        text = f"Record: {best_score}"
-    text_record = font.render(text, True, WHITE)
-    insert_result(USERNAME, score)
-    GAMERS_DB = get_best()
-    make_decision = False
-    while not make_decision:
+def draw_game_over(name, score, mas, db):
+    new_start = False
+    while not new_start:
+        img2048 = pygame.image.load("1404598408_1.png")
+        font = pygame.font.SysFont("comicsansms", 50)
+        font1 = pygame.font.SysFont("comicsansms", 30)
+        text_over = font.render("Game over! ", True, WHITE)
+        text_hint1 = font1.render("Press 'Space' to try again", True, GRAY)
+        text_hint2 = font1.render("Press 'Enter' to start new game", True, GRAY)
+        text_score = font.render(f"Your score: {score} ", True, WHITE)
+        best_score = db[0][1]
+        if score > best_score:
+            text = "New record!"
+        else:
+            text = f"Record: {best_score}"
+        text_record = font.render(text, True, WHITE)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit(0)
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    # restart game with name
-                    make_decision = True
-                    init_const()
-                elif event.key == pygame.K_RETURN:
-                    # restart game without name
-                    USERNAME = None
-                    make_decision = True
-                    init_const()
-        screen.fill(BLACK)
-        screen.blit(text_over, (220, 80))
-        screen.blit(text_score, (30, 250))
-        screen.blit(text_record, (30, 320))
-        screen.blit(text_hint1, (60, 440))
-        screen.blit(text_hint2, (30, 480))
-        screen.blit(pygame.transform.scale(img2048, [200, 200]), [10, 10])
-        pygame.display.update()
+        make_decision = False
+
+        while not make_decision:
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit(0)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        # restart game with name
+                        make_decision = True
+                        screen.fill(BLACK)
+                        insert_result(*game_loop(name, *init_const(score, mas)))
+                    elif event.key == pygame.K_RETURN:
+                        # restart game without name
+                        new_start = True
+                        make_decision = True
+
+            screen.fill(BLACK)
+            screen.blit(text_over, (220, 80))
+            screen.blit(text_score, (30, 250))
+            screen.blit(text_record, (30, 320))
+            screen.blit(text_hint1, (60, 440))
+            screen.blit(text_hint2, (30, 480))
+            screen.blit(pygame.transform.scale(img2048, [200, 200]), [10, 10])
+            pygame.display.update()
+        insert_result(name, score)
+        db = get_best()
     screen.fill(BLACK)
 
 
-def save_game():
+def save_game(USERNAME, score, mas):
     data = {
         'user': USERNAME,
         'score': score,
@@ -213,15 +219,14 @@ def save_game():
         json.dump(data, outfile)
 
 
-def game_loop():
-    global score, mas
-    draw_interface(score)
+def game_loop(USERNAME, score, mas):
+    draw_interface(score, mas)
     pygame.display.update()
     is_mas_move = False
     while is_zero_in_mas(mas) or possible_move(mas):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                save_game()
+                save_game(USERNAME, score, mas)
                 pygame.quit()
                 sys.exit(0)
             elif event.type == pygame.KEYDOWN:
@@ -245,12 +250,14 @@ def game_loop():
                     insert_2_or_4(mas, x, y)
                     print(f'Мы заполнили элемент под номером {random_num}')
                     is_mas_move = False
-                draw_interface(score, delta)
+                draw_interface(score, mas, delta)
                 pygame.display.update()
+    draw_game_over(USERNAME, score, mas, GAMERS_DB)
+    return USERNAME, score
 
 
 while True:
+    if 'data.txt' in os.listdir(path):
+        game_loop(*load_game())
     if USERNAME is None:
-        draw_intro()
-    game_loop()
-    draw_game_over()
+        game_loop(draw_intro(USERNAME), *(init_const(score, mas)))
